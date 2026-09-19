@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>CanpasMate</title>
+
+<style>
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7fb;
+    color: #333;
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 30px;
+     padding-bottom: 90px;
+}
+
+h1 {
+    text-align: center;
+    color: #4f7cff;
+    margin-bottom: 40px;
+}
+
+h2 {
+    color: #333;
+    border-left: 5px solid #4f7cff;
+    padding-left: 10px;
+    margin-top: 30px;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    background-color: white;
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 7px;
+    margin: 5px;
+}
+
+button {
+    background-color: #4f7cff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #365fd1;
+}
+.calendarHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.calendarHeader h2 {
+    border-left: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.week {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+#calendarDays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-top: 5px;
+}
+.calendarDay {
+    background-color: white;
+    min-height: 50px;
+    padding: 8px;
+    border-radius: 7px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.calendarDay:hover {
+    background-color: #e8eeff;
+}
+
+.today {
+    background-color: #4f7cff;
+    color: white;
+}
+
+.hasyotei {
+    border: 3px solid #4f7cff;
+}
+
+.hasKadai {
+    border: 3px solid #ff8a65;
+}
+
+.hasyotei.hasKadai {
+    border: 3px solid #9b59b6;
+}
+.kadaiToday {
+    border-left: 5px solid #e53935;
+    background-color: #ffebee;
+}
+
+.kadaiSoon {
+    border-left: 5px solid #ff9800;
+    background-color: #fff3e0;
+}
+
+.kadaiNormal {
+    border-left: 5px solid #4caf50;
+}
+ #timetable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: white;
+}
+
+#timetable th,
+#timetable td {
+    border: 1px solid #ddd;
+    padding: 12px 5px;
+    text-align: center;
+}
+
+#timetable th {
+    background-color: #4f7cff;
+    color: white;
+}
+
+#timetable td {
+    height: 50px;
+}
+
+.classCell {
+    background-color: #e8eeff;
+    color: #333;
+    font-weight: bold;
+    border-radius: 6px;
+}
+.homeMenu {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.homeMenu button {
+    flex: 1;
+    min-width: 120px;
+}
+.page {
+    display: none;
+}
+
+#homePage {
+    display: block;
+}
+.bottomMenu {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0;
+    z-index: 1000;
+}
+
+.bottomMenu button {
+    background: none;
+    color: #555;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.bottomMenu button:hover {
+    background-color: #f0f3ff;
+    color: #4f7cff;
+}
+
+/* ===== CanpasMate スマホ対応 ===== */
+@media (max-width: 600px) {
+    body {
+        max-width: none;
+        width: auto;
+        margin: 0;
+        padding: 15px;
+        padding-bottom: 90px;
+    }
+
+    h1 {
+        font-size: 28px;
+        margin-bottom: 25px;
+    }
+
+    h2 {
+        font-size: 21px;
+    }
+
+    input, select {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 45px;
+        margin: 5px 0;
+        font-size: 16px;
+    }
+
+    button {
+        min-height: 45px;
+        font-size: 15px;
+    }
+
+    .homeMenu {
+        display: none;
+    }
+
+    .bottomMenu {
+        padding: 6px 0;
+        padding-bottom: max(6px, env(safe-area-inset-bottom));
+    }
+
+    .bottomMenu button {
+        flex: 1;
+        padding: 6px 2px;
+        font-size: 12px;
+        min-height: 50px;
+    }
+
+    li {
+        padding: 14px;
+        font-size: 15px;
+    }
+
+    #timetable {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    #timetable th, #timetable td {
+        min-width: 75px;
+        padding: 10px 5px;
+    }
+
+    .calendarDay {
+        min-height: 45px;
+        padding: 6px;
+        font-size: 14px;
+    }
+}
+
+</style>
+
+<meta name="theme-color" content="#4f7cff">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CanpasMate">
+</head>
+<body>
+
+<h1>CanpasMate</h1>
+<div class="homeMenu">
+
+    <button onclick="showHome()">🏠 ホーム</button>
+    <button onclick="showCalendar()">📅 カレンダー</button>
+    <button onclick="showTimetable()">🎓 時間割</button>
+    <button onclick="showKadai()">📚 課題</button>
+
+</div>
+<div id="homePage" class="page">
+<h2>今日の予定</h2>
+
+<p id="todayDate"></p>
+
+<h3>🎓 今日の時間割</h3>
+<ul id="todayJugyoList"></ul>
+
+<h3>📌 今日の予定</h3>
+<ul id="todayyoteiList"></ul>
+
+
+   
+
+
+<h2>今後の予定</h2>
+
+<h3>📅 今日</h3>
+<ul id="futureTodayList"></ul>
+
+<h3>📅 明日</h3>
+<ul id="futureTomorrowList"></ul>
+
+<h3>📅 今週</h3>
+<ul id="futureWeekList"></ul>
+</div>
+<div id="timetablePage" class="page">
+
+<h2>時間割</h2>
+
+<select id="youbi">
+    <option value="月">月曜日</option>
+    <option value="火">火曜日</option>
+    <option value="水">水曜日</option>
+    <option value="木">木曜日</option>
+    <option value="金">金曜日</option>
+    <option value="土">土曜日</option>
+</select>
+
+<select id="jigen">
+    <option value="1限">1限</option>
+    <option value="2限">2限</option>
+    <option value="3限">3限</option>
+    <option value="4限">4限</option>
+    <option value="5限">5限</option>
+    <option value="6限">6限</option>
+    <option value="7限">7限</option>
+</select>
+
+<input type="text" id="jugyo" placeholder="授業名">
+
+<button onclick="addJugyo()">授業を追加</button>
+
+<table id="timetable">
+    <thead>
+        <tr>
+    <th>時限</th>
+    <th>月</th>
+    <th>火</th>
+    <th>水</th>
+    <th>木</th>
+    <th>金</th>
+    <th>土</th>
+</tr>
+    </thead>
+
+    <tbody id="timetableBody"></tbody>
+</table>
+<ul id="jugyoList"></ul>
+</div>
+<div id="kadaiPage" class="page">
+
+<h2>課題</h2>
+<input type="text" id="kadai" placeholder="課題名を入力">
+
+<input type="date" id="shimekiri">
+
+<button onclick="addKadai()">課題を追加</button>
+
+<ul id="kadaiList"></ul>
+<div id="kadaiSummary"></div>
+<button onclick="toggleCompletedKadai(event)">
+    完了済みを表示
+</button>
+<div id="editKadaiForm" style="display: none;">
+
+    <h3>📚 課題を編集</h3>
+
+    <input
+        type="text"
+        id="editKadaiName"
+        placeholder="課題名"
+    >
+
+    <input
+        type="date"
+        id="editKadaiDate"
+    >
+
+    <button onclick="saveEditKadai()">保存</button>
+
+    <button onclick="cancelEditKadai()">キャンセル</button>
+
+</div>
+</div>
+<div id="calendarPage" class="page">
+
+    <h2>📅 カレンダー</h2>
+
+    <div id="calendar">
+
+        <div class="calendarHeader">
+            <button onclick="changeMonth(-1)">←</button>
+            <h2 id="calendarTitle"></h2>
+            <button onclick="changeMonth(1)">→</button>
+        </div>
+
+        <div class="week">
+            <div>日</div>
+            <div>月</div>
+            <div>火</div>
+            <div>水</div>
+            <div>木</div>
+            <div>金</div>
+            <div>土</div>
+        </div>
+
+        <div id="calendarDays"></div>
+
+    </div>
+
+    <h2 id="selectedDateTitle"></h2>
+    <ul id="selectedyoteiList"></ul>
+
+</div>
+
+<button onclick="alert('CampasMateへようこそ!')">クリック</button>
+<input type="date" id="yoteiDate">
+
+<input type="time" id="jikan">
+
+<input type="text" id="yotei" placeholder="予定を入力">
+
+<button onclick="addyotei()">予定を追加</button>
+<ul id="yoteiList"></ul>
+
+<script>
+let showCompletedKadai = false;
+let currentDate = new Date();
+function addyotei() {
+
+    let date = document.getElementById("yoteiDate").value;
+    let jikan = document.getElementById("jikan").value;
+    let yotei = document.getElementById("yotei").value;
+
+    if (date !== "" && jikan !== "" && yotei !== "") {
+
+        let yoteiData = {
+            date: date,
+            jikan: jikan,
+            yotei: yotei
+        };
+
+        let yoteiList =
+            JSON.parse(localStorage.getItem("yoteiList")) || [];
+
+        yoteiList.push(yoteiData);
+
+        localStorage.setItem(
+            "yoteiList",
+            JSON.stringify(yoteiList)
+        );
+
+        displayyotei();
+
+        document.getElementById("yoteiDate").value = "";
+        document.getElementById("jikan").value = "";
+        document.getElementById("yotei").value = "";
+    }
+}
+function displayyotei() {
+
+     let yoteiList =
+        JSON.parse(localStorage.getItem("yoteiList")) || [];
+
+    let list = document.getElementById("yoteiList");
+
+    list.innerHTML = "";
+
+    yoteiList.forEach(function(item, index) {
+
+        let li = document.createElement("li");
+
+        li.textContent =
+            item.date + "　" +
+            item.jikan + "　" +
+            item.yotei + " ";
+
+        let deleteButton = document.createElement("button");
+        deleteButton.textContent = "削除";
+
+        deleteButton.onclick = function() {
+
+            yoteiList.splice(index, 1);
+
+            localStorage.setItem(
+                "yoteiList",
+                JSON.stringify(yoteiList)
+            );
+
+            displayyotei();
+        };
+
+        li.appendChild(deleteButton);
+
+        list.appendChild(li);
+    });
+}
+displayyotei();
+function addKadai() {
+
+    let kadai = document.getElementById("kadai").value;
+    let shimekiri = document.getElementById("shimekiri").value;
+
+    if (kadai !== "" && shimekiri !== "") {
+
+        let kadaiData = {
+    date: shimekiri,
+    kadai: kadai,
+    completed: false
+};
+        let kadaiList =
+            JSON.parse(localStorage.getItem("kadaiList")) || [];
+
+        kadaiList.push(kadaiData);
+
+        localStorage.setItem(
+            "kadaiList",
+            JSON.stringify(kadaiList)
+        );
+
+        displayKadai();
+
+        document.getElementById("kadai").value = "";
+        document.getElementById("shimekiri").value = "";
+    }
+}
+
+function displayKadai() {
+
+    let kadaiList =
+        JSON.parse(localStorage.getItem("kadaiList")) || [];
+
+    let list = document.getElementById("kadaiList");
+
+    list.innerHTML = "";
+
+    kadaiList.forEach(function(item, index) {
+
+    if (item.completed && !showCompletedKadai) {
+        return;
+    }
+
+        let li = document.createElement("li");
+
+        if (item.completed) {
+            li.style.textDecoration = "line-through";
+            li.style.color = "#999";
+        }
+
+        li.textContent =
+            item.date + "　" + item.kadai + " ";
+            let today = new Date();
+today.setHours(0, 0, 0, 0);
+
+let deadline = new Date(item.date);
+deadline.setHours(0, 0, 0, 0);
+
+let diff =
+    (deadline - today) / (1000 * 60 * 60 * 24);
+
+if (!item.completed) {
+
+    if (diff === 0) {
+        li.classList.add("kadaiToday");
+    } else if (diff >= 1 && diff <= 3) {
+        li.classList.add("kadaiSoon");
+    } else if (diff > 3) {
+        li.classList.add("kadaiNormal");
+    }
+}
+
+        let completeButton = document.createElement("button");
+
+        if (item.completed) {
+            completeButton.textContent = "未完了に戻す";
+        } else {
+            completeButton.textContent = "完了";
+        }
+
+        completeButton.onclick = function() {
+
+            item.completed = !item.completed;
+
+            localStorage.setItem(
+                "kadaiList",
+                JSON.stringify(kadaiList)
+            );
+
+            displayKadai();
+        };
+
+        li.appendChild(completeButton);
+       let editButton = document.createElement("button");
+editButton.textContent = "編集";
+
+editButton.onclick = function() {
+    startEditKadai(index);
+};
+li.appendChild(editButton);
+
+        let deleteButton = document.createElement("button");
+        deleteButton.textContent = "削除";
+
+        deleteButton.onclick = function() {
+
+            kadaiList.splice(index, 1);
+
+            localStorage.setItem(
+                "kadaiList",
+                JSON.stringify(kadaiList)
+            );
+
+            displayKadai();
+        };
+
+        li.appendChild(deleteButton);
+
+        list.appendChild(li);
+    });
+    displayKadaiSummary();
+}
+
+
+displayKadai();
+
+
+function displaytodayyotei() {
+
+    let yoteiList =
+        JSON.parse(localStorage.getItem("yoteiList")) || [];
+
+    let today = new Date();
+
+    let year = today.getFullYear();
+    let month = String(today.getMonth() + 1).padStart(2, "0");
+    let day = String(today.getDate()).padStart(2, "0");
+
+    let todayString = year + "-" + month + "-" + day;
+
+    document.getElementById("todayDate").textContent =
+        year + "年" + (today.getMonth() + 1) + "月" + day + "日";
+
+    let list = document.getElementById("todayyoteiList");
+
+    list.innerHTML = "";
+
+    let todayyotei = yoteiList.filter(function(item) {
+        return item.date === todayString;
+    });
+
+    todayyotei.sort(function(a, b) {
+        return a.jikan.localeCompare(b.jikan);
+    });
+
+    if (todayyotei.length === 0) {
+
+        let li = document.createElement("li");
+        li.textContent = "今日の予定はありません";
+        list.appendChild(li);
+
+    } else {
+
+        todayyotei.forEach(function(item) {
+
+            let li = document.createElement("li");
+
+            li.textContent =
+                item.jikan + "　" + item.yotei;
+
+            list.appendChild(li);
+        });
+    }
+}
+
+displaytodayyotei();
+function displayTodayJugyo() {
+
+    let jugyoList =
+        JSON.parse(localStorage.getItem("jugyoList")) || [];
+
+    let today = new Date();
+
+    let week = today.getDay();
+
+    let youbiList = [
+        "日",
+        "月",
+        "火",
+        "水",
+        "木",
+        "金",
+        "土"
+    ];
+
+    let todayYoubi = youbiList[week];
+
+    let list = document.getElementById("todayJugyoList");
+
+    list.innerHTML = "";
+
+    let todayJugyo = jugyoList.filter(function(item) {
+        return item.youbi === todayYoubi;
+    });
+
+    todayJugyo.sort(function(a, b) {
+        return a.jigen.localeCompare(b.jigen);
+    });
+
+    if (todayJugyo.length === 0) {
+
+        let li = document.createElement("li");
+        li.textContent = "今日の授業はありません";
+
+        list.appendChild(li);
+
+    } else {
+
+        todayJugyo.forEach(function(item) {
+
+            let li = document.createElement("li");
+
+            li.textContent =
+                item.jigen + "　" + item.jugyo;
+
+            list.appendChild(li);
+        });
+    }
+}
+
+displayTodayJugyo();
+
+function displayCalendar() {
+
+    let calendarTitle = document.getElementById("calendarTitle");
+    let calendarDays = document.getElementById("calendarDays");
+
+    if (!calendarTitle || !calendarDays) {
+        return;
+    }
+
+    let year = currentDate.getFullYear();
+    let month = currentDate.getMonth();
+
+    calendarTitle.textContent =
+        year + "年 " + (month + 1) + "月";
+
+    calendarDays.innerHTML = "";
+
+    let firstDay = new Date(year, month, 1).getDay();
+    let lastDate = new Date(year, month + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+        let empty = document.createElement("div");
+        calendarDays.appendChild(empty);
+    }
+
+    for (let day = 1; day <= lastDate; day++) {
+
+        let dayButton = document.createElement("div");
+
+        dayButton.className = "calendarDay";
+        dayButton.textContent = day;
+
+        let dateString =
+            year + "-" +
+            String(month + 1).padStart(2, "0") + "-" +
+            String(day).padStart(2, "0");
+
+        let today = new Date();
+
+        if (
+            year === today.getFullYear() &&
+            month === today.getMonth() &&
+            day === today.getDate()
+        ) {
+            dayButton.classList.add("today");
+        }
+
+        let yoteiList =
+            JSON.parse(localStorage.getItem("yoteiList")) || [];
+
+        let kadaiList =
+            JSON.parse(localStorage.getItem("kadaiList")) || [];
+
+        let hasyotei = yoteiList.some(function(item) {
+            return item.date === dateString;
+        });
+
+        let hasKadai = kadaiList.some(function(item) {
+            return item.date === dateString;
+        });
+
+        if (hasyotei) {
+            dayButton.classList.add("hasyotei");
+        }
+
+        if (hasKadai) {
+            dayButton.classList.add("hasKadai");
+        }
+
+        dayButton.onclick = function() {
+            displaySelectedyotei(dateString);
+            displaySelectedKadai(dateString);
+        };
+
+        calendarDays.appendChild(dayButton);
+    }
+}
+
+function changeMonth(amount) {
+
+    currentDate.setMonth(currentDate.getMonth() + amount);
+
+    displayCalendar();
+}
+
+function displaySelectedyotei(dateString) {
+
+    let yoteiList =
+        JSON.parse(localStorage.getItem("yoteiList")) || [];
+
+    let selectedyotei = yoteiList.filter(function(item) {
+        return item.date === dateString;
+    });
+
+    let title = document.getElementById("selectedDateTitle");
+    let list = document.getElementById("selectedyoteiList");
+
+    title.textContent = dateString + " の予定";
+
+    list.innerHTML = "";
+
+    if (selectedyotei.length === 0) {
+
+        let li = document.createElement("li");
+        li.textContent = "予定はありません";
+        list.appendChild(li);
+
+    } else {
+
+        selectedyotei.sort(function(a, b) {
+            return a.jikan.localeCompare(b.jikan);
+        });
+
+        selectedyotei.forEach(function(item) {
+
+            let li = document.createElement("li");
+
+            li.textContent =
+                item.jikan + "　" + item.yotei;
+
+            list.appendChild(li);
+        });
+    }
+}
+function displaySelectedKadai(dateString) {
+
+    let kadaiList =
+        JSON.parse(localStorage.getItem("kadaiList")) || [];
+
+    let selectedKadai = kadaiList.filter(function(item) {
+        return item.date === dateString;
+    });
+
+    let title = document.getElementById("selectedDateTitle");
+
+    let list = document.getElementById("selectedyoteiList");
+
+    if (selectedKadai.length > 0) {
+
+        let heading = document.createElement("h3");
+        heading.textContent = "📚 課題";
+        list.appendChild(heading);
+
+        selectedKadai.forEach(function(item) {
+
+            let li = document.createElement("li");
+
+            li.textContent =
+                "締切：" + item.date + "　" + item.kadai;
+
+            list.appendChild(li);
+        });
+    }
+}
+displayCalendar();
+function displayFutureyotei() {
+
+    let yoteiList =
+        JSON.parse(localStorage.getItem("yoteiList")) || [];
+
+    let today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    let weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    let todayString = formatDate(today);
+    let tomorrowString = formatDate(tomorrow);
+
+    let todayList =
+        document.getElementById("futureTodayList");
+
+    let tomorrowList =
+        document.getElementById("futureTomorrowList");
+
+    let weekList =
+        document.getElementById("futureWeekList");
+
+    todayList.innerHTML = "";
+    tomorrowList.innerHTML = "";
+    weekList.innerHTML = "";
+
+    let todayyotei = yoteiList.filter(function(item) {
+        return item.date === todayString;
+    });
+
+    let tomorrowyotei = yoteiList.filter(function(item) {
+        return item.date === tomorrowString;
+    });
+
+    let weekyotei = yoteiList.filter(function(item) {
+
+        let date = new Date(item.date);
+        date.setHours(0, 0, 0, 0);
+
+        return date >= today && date < weekEnd;
+    });
+
+    displayyoteiList(todayyotei, todayList);
+    displayyoteiList(tomorrowyotei, tomorrowList);
+    displayyoteiList(weekyotei, weekList);
+}
+
+
+function displayyoteiList(yoteis, list) {
+
+    yoteis.sort(function(a, b) {
+        return a.date.localeCompare(b.date) ||
+               a.jikan.localeCompare(b.jikan);
+    });
+
+    if (yoteis.length === 0) {
+
+        let li = document.createElement("li");
+        li.textContent = "予定はありません";
+
+        list.appendChild(li);
+
+        return;
+    }
+
+    yoteis.forEach(function(item) {
+
+        let li = document.createElement("li");
+
+        li.textContent =
+            item.date + "　" +
+            item.jikan + "　" +
+            item.yotei;
+
+        list.appendChild(li);
+    });
+}
+
+
+function formatDate(date) {
+
+    let year = date.getFullYear();
+    let month =
+        String(date.getMonth() + 1).padStart(2, "0");
+
+    let day =
+        String(date.getDate()).padStart(2, "0");
+
+    return year + "-" + month + "-" + day;
+}
+
+
+displayFutureyotei();
+function addJugyo() {
+
+    let youbi = document.getElementById("youbi").value;
+    let jigen = document.getElementById("jigen").value;
+    let jugyo = document.getElementById("jugyo").value;
+
+    if (jugyo !== "") {
+
+        let jugyoData = {
+            youbi: youbi,
+            jigen: jigen,
+            jugyo: jugyo
+        };
+
+        let jugyoList =
+            JSON.parse(localStorage.getItem("jugyoList")) || [];
+
+        jugyoList.push(jugyoData);
+
+        localStorage.setItem(
+            "jugyoList",
+            JSON.stringify(jugyoList)
+        );
+
+        displayJugyo();
+
+        document.getElementById("jugyo").value = "";
+    }
+}
+
+
+function displayJugyo() {
+
+    let jugyoList =
+        JSON.parse(localStorage.getItem("jugyoList")) || [];
+
+    let timetableBody =
+        document.getElementById("timetableBody");
+
+    timetableBody.innerHTML = "";
+
+   let youbiList = ["月", "火", "水", "木", "金", "土"];
+    let jigenList = [
+    "1限",
+    "2限",
+    "3限",
+    "4限",
+    "5限",
+    "6限",
+    "7限"
+];
+
+    jigenList.forEach(function(jigen) {
+
+        let tr = document.createElement("tr");
+
+        let th = document.createElement("th");
+        th.textContent = jigen;
+        tr.appendChild(th);
+
+        youbiList.forEach(function(youbi) {
+
+            let td = document.createElement("td");
+
+            let jugyo = jugyoList.find(function(item) {
+                return item.youbi === youbi &&
+                       item.jigen === jigen;
+            });
+
+            if (jugyo) {
+
+    td.textContent = jugyo.jugyo;
+    td.classList.add("classCell");
+
+    td.onclick = function() {
+
+        let newJugyo = prompt(
+            "授業名を変更してください",
+            jugyo.jugyo
+        );
+
+        if (newJugyo !== null && newJugyo.trim() !== "") {
+
+            jugyo.jugyo = newJugyo.trim();
+
+            localStorage.setItem(
+                "jugyoList",
+                JSON.stringify(jugyoList)
+            );
+
+            displayJugyo();
+        }
+    };
+
+}
+            tr.appendChild(td);
+        });
+
+        timetableBody.appendChild(tr);
+    });
+
+    let list = document.getElementById("jugyoList");
+
+    list.innerHTML = "";
+
+    jugyoList.forEach(function(item, index) {
+
+        let li = document.createElement("li");
+
+        li.textContent =
+            item.youbi + "　" +
+            item.jigen + "　" +
+            item.jugyo + " ";
+
+        let deleteButton = document.createElement("button");
+
+        deleteButton.textContent = "削除";
+
+        deleteButton.onclick = function() {
+
+            jugyoList.splice(index, 1);
+
+            localStorage.setItem(
+                "jugyoList",
+                JSON.stringify(jugyoList)
+            );
+
+            displayJugyo();
+        };
+
+        li.appendChild(deleteButton);
+
+        list.appendChild(li);
+    });
+}
+
+displayJugyo();
+function hideAllPages() {
+    document.getElementById("homePage").style.display = "none";
+    document.getElementById("calendarPage").style.display = "none";
+    document.getElementById("timetablePage").style.display = "none";
+    document.getElementById("kadaiPage").style.display = "none";
+}
+
+function showHome() {
+    hideAllPages();
+    document.getElementById("homePage").style.display = "block";
+}
+
+function showTimetable() {
+    hideAllPages();
+    document.getElementById("timetablePage").style.display = "block";
+}
+
+function showKadai() {
+    hideAllPages();
+    document.getElementById("kadaiPage").style.display = "block";
+}
+
+function showCalendar() {
+    hideAllPages();
+
+    document.getElementById("calendarPage").style.display = "block";
+
+    setTimeout(function() {
+        displayCalendar();
+    }, 0);
+}
+let editingKadaiIndex = null;
+
+function startEditKadai(index) {
+
+    let kadaiList =
+        JSON.parse(localStorage.getItem("kadaiList")) || [];
+
+    let item = kadaiList[index];
+
+    editingKadaiIndex = index;
+
+    document.getElementById("editKadaiName").value =
+        item.kadai;
+
+    document.getElementById("editKadaiDate").value =
+        item.date;
+
+    document.getElementById("editKadaiForm").style.display =
+        "block";
+}
+
+function saveEditKadai() {
+
+    let kadaiList =
+        JSON.parse(localStorage.getItem("kadaiList")) || [];
+
+    let newName =
+        document.getElementById("editKadaiName").value;
+
+    let newDate =
+        document.getElementById("editKadaiDate").value;
+
+    if (newName === "" || newDate === "") {
+        alert("課題名と締切日を入力してください");
+        return;
+    }
+
+    kadaiList[editingKadaiIndex].kadai = newName;
+    kadaiList[editingKadaiIndex].date = newDate;
+
+    localStorage.setItem(
+        "kadaiList",
+        JSON.stringify(kadaiList)
+    );
+
+    document.getElementById("editKadaiForm").style.display =
+        "none";
+
+    displayKadai();
+    displayCalendar();
+
+    editingKadaiIndex = null;
+}
+
+function cancelEditKadai() {
+
+    document.getElementById("editKadaiForm").style.display =
+        "none";
+
+    editingKadaiIndex = null;
+}
+
+
+function toggleCompletedKadai(event) {
+
+    showCompletedKadai = !showCompletedKadai;
+
+    let button = event.target;
+
+    if (showCompletedKadai) {
+        button.textContent = "完了済みを隠す";
+    } else {
+        button.textContent = "完了済みを表示";
+    }
+
+    displayKadai();
+   
+}
+function displayKadaiSummary() {
+
+    let kadaiList =
+        JSON.parse(localStorage.getItem("kadaiList")) || [];
+
+    let incompleteKadai = kadaiList.filter(function(item) {
+        return !item.completed;
+    });
+
+    let summary =
+        document.getElementById("kadaiSummary");
+
+    summary.textContent =
+        "📚 未完了の課題：" +
+        incompleteKadai.length +
+        "件";
+}
+
+displayKadaiSummary();
+
+</script>
+<div class="bottomMenu">
+
+    <button onclick="showHome()">
+        🏠<br>ホーム
+    </button>
+
+    <button onclick="showCalendar()">
+        📅<br>カレンダー
+    </button>
+
+    <button onclick="showTimetable()">
+        🎓<br>時間割
+    </button>
+
+    <button onclick="showKadai()">
+        📚<br>課題
+    </button>
+
+</div>
+<script>
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js")
+            .catch(error => console.error("Service Worker registration failed:", error));
+    });
+}
+</script>
+</body>
+</html>
