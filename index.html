@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>CanpasMate</title>
+<title>Yotomo</title>
 
 <style>
 
@@ -202,7 +202,7 @@ button:hover {
     color: #4f7cff;
 }
 
-/* ===== CanpasMate スマホ対応 ===== */
+/* ===== Yotomo スマホ対応 ===== */
 @media (max-width: 600px) {
     body {
         max-width: none;
@@ -305,11 +305,11 @@ button:hover {
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="CanpasMate">
+<meta name="apple-mobile-web-app-title" content="Yotomo">
 </head>
 <body>
 
-<h1>CanpasMate</h1>
+<h1>Yotomo</h1>
 <div class="homeMenu">
 
     <button onclick="showHome()">🏠 ホーム</button>
@@ -1686,7 +1686,7 @@ async function shareGroup() {
     if (navigator.share) {
         try {
             await navigator.share({
-                title: "CanpasMateのグループ招待",
+                title: "Yotomoのグループ招待",
                 text: activeGroup.name + " に参加してな！",
                 url: link
             });
