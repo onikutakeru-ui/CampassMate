@@ -1,11 +1,22 @@
 {
   "name": "CanpasMate",
   "short_name": "CanpasMate",
-  "description": "予定・時間割・課題をまとめて管理する学生向けアプリ",
+  "description": "予定・時間割・課題・友達との予定共有をまとめて管理する学生向けアプリ",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f7fb",
   "theme_color": "#4f7cff",
   "orientation": "portrait",
-  "icons": []
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }
