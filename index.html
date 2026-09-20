@@ -377,10 +377,15 @@ button:hover {
 </div>
 
 <div class="groupCard">
-    <h3>📅 自分の予定を友達に公開</h3>
-    <input id="publicPlanDate" type="date">
-    <input id="publicPlanTitle" type="text" placeholder="予定">
-    <button onclick="addPublicPlan()">友達に公開する</button>
+    <h3>📢 自分の予定を友達に公開</h3>
+    <p class="smallNote">カレンダーの予定や時間割から選んで公開できます。</p>
+    <select id="publicPlanSource" onchange="updatePublicPlanChoices()">
+        <option value="yotei">📅 カレンダーの予定</option>
+        <option value="jugyo">🎓 時間割</option>
+        <option value="kadai">📚 課題</option>
+    </select>
+    <select id="publicPlanChoice"></select>
+    <button onclick="publishSelectedPlan()">🌐 この予定を公開する</button>
     <ul id="publicPlanList"></ul>
 </div>
 
@@ -595,6 +600,7 @@ async function loadMyProfile() {
   document.getElementById("profileName").value = myProfile.name || "";
   document.getElementById("myFriendCode").textContent = myProfile.friendCode;
   await renderMyPublicPlans();
+  updatePublicPlanChoices();
 }
 
 async function saveOnlineProfile() {
@@ -633,30 +639,29 @@ function escapeHtml(s) {
 
 async function addFriendByCode() {
   if (!db || !currentUser) return alert("オンライン機能の準備ができていません。");
-  const code = document.getElementById("friendCodeInput").value.trim().toUpperCase();
+  const input = document.getElementById("friendCodeInput");
+  const code = input.value.trim().toUpperCase();
   if (!code) return alert("友達コードを入力してな。");
-
-  const q = query(collection(db, "profiles"), where("friendCode", "==", code));
-  const snap = await getDocs(q);
-  if (snap.empty) return alert("その友達コードは見つからへんかった。");
-
-  const friendDoc = snap.docs[0];
-  if (friendDoc.id === currentUser.uid) return alert("自分自身は追加できへんで。");
-
-  const p = friendDoc.data();
-  await setDoc(doc(db, "profiles", currentUser.uid, "friends", friendDoc.id), {
-    name: p.name || "ななし",
-    addedAt: serverTimestamp()
-  });
-  // 相手側にも「あなた」を友達として登録
-  await setDoc(doc(db, "profiles", friendDoc.id, "friends", currentUser.uid), {
-    name: myProfile?.name || "ななし",
-    addedAt: serverTimestamp()
-  });
-
-  await loadFriends();
-  document.getElementById("friendCodeInput").value = "";
-  alert((p.name || "友達") + "を追加したで！");
+  try {
+    const q = query(collection(db, "profiles"), where("friendCode", "==", code));
+    const snap = await getDocs(q);
+    if (snap.empty) return alert("その友達コードは見つからへんかった。");
+    const friendDoc = snap.docs[0];
+    if (friendDoc.id === currentUser.uid) return alert("自分自身は追加できへんで。");
+    const p = friendDoc.data();
+    await setDoc(doc(db, "profiles", currentUser.uid, "friends", friendDoc.id), {
+      name: p.name || "ななし", addedAt: serverTimestamp()
+    });
+    await setDoc(doc(db, "profiles", friendDoc.id, "friends", currentUser.uid), {
+      name: myProfile?.name || "ななし", addedAt: serverTimestamp()
+    });
+    await loadFriends();
+    input.value = "";
+    alert((p.name || "友達") + "を追加したで！");
+  } catch (e) {
+    console.error("addFriendByCode error:", e);
+    alert("友達追加に失敗したで。FirebaseのFirestoreルールを確認してな。");
+  }
 }
 
 async function removeFriend(uid) {
@@ -669,16 +674,76 @@ async function removeFriend(uid) {
 }
 
 async function addPublicPlan() {
-  if (!db || !currentUser) return alert("オンライン機能の準備ができていません。");
-  const date = document.getElementById("publicPlanDate").value;
-  const title = document.getElementById("publicPlanTitle").value.trim();
-  if (!date || !title) return alert("日付と予定を入力してな。");
+  return publishSelectedPlan();
+}
 
-  await addDoc(collection(db, "profiles", currentUser.uid, "publicPlans"), {
-    date, title, createdAt: serverTimestamp()
+function getLocalPublicChoices() {
+  const source = document.getElementById("publicPlanSource")?.value || "yotei";
+  if (source === "yotei") {
+    return (JSON.parse(localStorage.getItem("yoteiList")) || []).map((x, i) => ({
+      key: "yotei:" + i,
+      label: "📅 " + x.date + " " + x.jikan + "　" + x.yotei,
+      date: x.date, title: x.yotei, time: x.jikan, type: "予定"
+    }));
+  }
+  if (source === "jugyo") {
+    const days = ["日","月","火","水","木","金","土"];
+    const now = new Date();
+    return (JSON.parse(localStorage.getItem("jugyoList")) || []).map((x, i) => {
+      const next = new Date(now);
+      let diff = days.indexOf(x.youbi) - now.getDay();
+      if (diff < 0) diff += 7;
+      next.setDate(now.getDate() + diff);
+      return {
+        key: "jugyo:" + i,
+        label: "🎓 " + x.youbi + " " + x.jigen + "　" + x.jugyo,
+        date: formatDate(next),
+        title: x.jugyo + "（" + x.youbi + " " + x.jigen + "）",
+        time: "", type: "時間割"
+      };
+    });
+  }
+  return (JSON.parse(localStorage.getItem("kadaiList")) || []).map((x, i) => ({
+    key: "kadai:" + i,
+    label: "📚 " + x.date + "　" + x.kadai,
+    date: x.date, title: "課題：" + x.kadai, time: "", type: "課題"
+  }));
+}
+
+function updatePublicPlanChoices() {
+  const select = document.getElementById("publicPlanChoice");
+  if (!select) return;
+  const choices = getLocalPublicChoices();
+  select.innerHTML = "";
+  if (!choices.length) {
+    const opt = document.createElement("option");
+    opt.value = ""; opt.textContent = "公開できるデータがありません";
+    select.appendChild(opt);
+    return;
+  }
+  choices.forEach(x => {
+    const opt = document.createElement("option");
+    opt.value = x.key; opt.textContent = x.label;
+    select.appendChild(opt);
   });
-  document.getElementById("publicPlanTitle").value = "";
-  await renderMyPublicPlans();
+}
+
+async function publishSelectedPlan() {
+  if (!db || !currentUser) return alert("オンライン機能の準備ができていません。");
+  const key = document.getElementById("publicPlanChoice")?.value;
+  const selected = getLocalPublicChoices().find(x => x.key === key);
+  if (!selected) return alert("公開する予定を選んでな。");
+  try {
+    await addDoc(collection(db, "profiles", currentUser.uid, "publicPlans"), {
+      date: selected.date, title: selected.title, time: selected.time || "",
+      type: selected.type, createdAt: serverTimestamp()
+    });
+    await renderMyPublicPlans();
+    alert("友達に公開したで！");
+  } catch (e) {
+    console.error(e);
+    alert("公開に失敗したで。Firestoreのルールを確認してな。");
+  }
 }
 
 async function renderMyPublicPlans() {
@@ -689,7 +754,7 @@ async function renderMyPublicPlans() {
   snap.docs.forEach(d => {
     const p = d.data();
     const li = document.createElement("li");
-    li.textContent = "📅 " + p.date + "　" + p.title;
+    li.textContent = (p.type ? "🌐 " + p.type + "　" : "📅 ") + p.date + (p.time ? "　" + p.time : "") + "　" + p.title;
     list.appendChild(li);
   });
 }
@@ -714,7 +779,7 @@ async function viewFriendSchedule(uid) {
   snap.docs.forEach(d => {
     const x = d.data();
     const li = document.createElement("li");
-    li.textContent = "📅 " + x.date + "　" + x.title;
+    li.textContent = (x.type ? "🌐 " + x.type + "　" : "📅 ") + x.date + (x.time ? "　" + x.time : "") + "　" + x.title;
     list.appendChild(li);
   });
 }
@@ -1430,10 +1495,9 @@ function displayJugyo() {
 
 displayJugyo();
 function hideAllPages() {
-    document.getElementById("homePage").style.display = "none";
-    document.getElementById("calendarPage").style.display = "none";
-    document.getElementById("timetablePage").style.display = "none";
-    document.getElementById("kadaiPage").style.display = "none";
+    document.querySelectorAll(".page").forEach(function(page) {
+        page.style.display = "none";
+    });
 }
 
 function showHome() {
@@ -1734,9 +1798,10 @@ function leaveGroup() {
 }
 
 function showGroup() {
-    document.querySelectorAll(".page").forEach(p => p.style.display = "none");
+    hideAllPages();
     document.getElementById("groupPage").style.display = "block";
     renderGroup();
+    updatePublicPlanChoices();
 }
 renderGroup();
 </script>
