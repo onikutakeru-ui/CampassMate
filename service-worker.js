@@ -1,4 +1,4 @@
-const CACHE_NAME = "canpas-mate-v2";
+const CACHE_NAME = "yotomo-v3";
 const ASSETS = [
   "./",
   "./index.html",
