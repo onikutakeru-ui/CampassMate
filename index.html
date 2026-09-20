@@ -273,10 +273,36 @@ button:hover {
     }
 }
 
+
+.groupCard {
+    background: white;
+    padding: 16px;
+    margin: 14px 0;
+    border-radius: 14px;
+    box-shadow: 0 2px 7px rgba(0,0,0,.08);
+}
+.groupCard input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    margin: 5px 0;
+    font-size: 16px;
+}
+.groupCard button {
+    margin: 5px 3px 5px 0;
+}
+.smallNote {
+    color: #666;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
 </style>
 
 <meta name="theme-color" content="#4f7cff">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="CanpasMate">
@@ -290,6 +316,7 @@ button:hover {
     <button onclick="showCalendar()">📅 カレンダー</button>
     <button onclick="showTimetable()">🎓 時間割</button>
     <button onclick="showKadai()">📚 課題</button>
+    <button onclick="showGroup()">👥 グループ</button>
 
 </div>
 <div id="homePage" class="page">
@@ -318,6 +345,51 @@ button:hover {
 <h3>📅 今週</h3>
 <ul id="futureWeekList"></ul>
 </div>
+
+
+<div id="groupPage" class="page">
+<h2>👥 友達の予定表</h2>
+
+<div class="groupCard">
+    <h3>あなたのプロフィール</h3>
+    <input id="profileName" type="text" placeholder="表示名（例：たける）">
+    <button onclick="saveOnlineProfile()">保存</button>
+    <p>あなたの友達コード：<strong id="myFriendCode">準備中…</strong></p>
+    <button onclick="copyFriendCode()">📋 コードをコピー</button>
+</div>
+
+<div class="groupCard">
+    <h3>友達を追加</h3>
+    <input id="friendCodeInput" type="text" placeholder="友達のコード">
+    <button onclick="addFriendByCode()">友達を追加</button>
+    <p class="smallNote">友達コードを知っている人だけ追加できます。</p>
+</div>
+
+<div class="groupCard">
+    <h3>👤 友達リスト</h3>
+    <ul id="friendList"></ul>
+</div>
+
+<div class="groupCard" id="friendScheduleBox" style="display:none;">
+    <h3 id="friendScheduleTitle">友達の予定</h3>
+    <p class="smallNote">相手が「友達に公開」にした予定だけ表示されます。</p>
+    <ul id="friendScheduleList"></ul>
+</div>
+
+<div class="groupCard">
+    <h3>📅 自分の予定を友達に公開</h3>
+    <input id="publicPlanDate" type="date">
+    <input id="publicPlanTitle" type="text" placeholder="予定">
+    <button onclick="addPublicPlan()">友達に公開する</button>
+    <ul id="publicPlanList"></ul>
+</div>
+
+<p id="onlineStatus" class="smallNote">オンライン機能を準備中…</p>
+<p class="smallNote">
+※ 予定は友達ごとに別々に管理します。友達はあなたの「公開した予定」だけを見る仕組みです。
+</p>
+</div>
+
 <div id="timetablePage" class="page">
 
 <h2>時間割</h2>
@@ -437,6 +509,230 @@ button:hover {
 
 <button onclick="addyotei()">予定を追加</button>
 <ul id="yoteiList"></ul>
+
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, addDoc, collection, query, where,
+  getDocs, serverTimestamp, orderBy, deleteDoc
+} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+/*
+  Firebase ConsoleでWebアプリを登録したあと、
+  下の firebaseConfig を自分の値に置き換えてください。
+*/
+const firebaseConfig = {
+  apiKey: "AIzaSyDYhOmO-vZ2Ukk6vAjwSZd-tXopWwTtlTs",
+  authDomain: "campassmate-4d485.firebaseapp.com",
+  projectId: "campassmate-4d485",
+  storageBucket: "campassmate-4d485.firebasestorage.app",
+  messagingSenderId: "890466443862",
+  appId: "1:890466443862:web:207b1c079404580e3791f7",
+  measurementId: "G-J5XMFLJSTB"
+};
+
+const firebaseReady = !Object.values(firebaseConfig).some(v => String(v).startsWith("YOUR_"));
+
+let db = null;
+let auth = null;
+let currentUser = null;
+let myProfile = null;
+let friends = [];
+
+window.onlineFriends = {
+  get ready() { return firebaseReady && !!currentUser; }
+};
+
+function codeFromUid(uid) {
+  return uid.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase();
+}
+
+function setStatus(msg) {
+  const el = document.getElementById("onlineStatus");
+  if (el) el.textContent = msg;
+}
+
+async function startFirebase() {
+  if (!firebaseReady) {
+    setStatus("Firebaseの設定がまだです。設定後に友達機能が使えます。");
+    return;
+  }
+  try {
+    const app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+
+    onAuthStateChanged(auth, async user => {
+      currentUser = user;
+      if (!user) return;
+      await loadMyProfile();
+      await loadFriends();
+      setStatus("オンライン接続OK！");
+    });
+
+    await signInAnonymously(auth);
+  } catch (e) {
+    console.error(e);
+    setStatus("オンライン接続に失敗しました。Firebase設定を確認してください。");
+  }
+}
+
+async function loadMyProfile() {
+  const ref = doc(db, "profiles", currentUser.uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    myProfile = snap.data();
+  } else {
+    myProfile = {
+      name: "ななし",
+      friendCode: codeFromUid(currentUser.uid),
+      createdAt: serverTimestamp()
+    };
+    await setDoc(ref, myProfile);
+  }
+  document.getElementById("profileName").value = myProfile.name || "";
+  document.getElementById("myFriendCode").textContent = myProfile.friendCode;
+  await renderMyPublicPlans();
+}
+
+async function saveOnlineProfile() {
+  if (!db || !currentUser) return alert("オンライン機能の準備ができていません。");
+  const name = document.getElementById("profileName").value.trim() || "ななし";
+  myProfile = {...myProfile, name};
+  await setDoc(doc(db, "profiles", currentUser.uid), myProfile, {merge:true});
+  alert("プロフィールを保存したで！");
+}
+
+async function loadFriends() {
+  const snap = await getDocs(collection(db, "profiles", currentUser.uid, "friends"));
+  friends = snap.docs.map(d => ({id:d.id, ...d.data()}));
+  renderFriends();
+}
+
+function renderFriends() {
+  const list = document.getElementById("friendList");
+  list.innerHTML = "";
+  if (!friends.length) {
+    list.innerHTML = "<li>まだ友達がおらへんで。友達コードを入力して追加しよう！</li>";
+    return;
+  }
+  friends.forEach(f => {
+    const li = document.createElement("li");
+    li.innerHTML = "👤 <strong>" + escapeHtml(f.name || "ななし") + "</strong> "
+      + '<button onclick="viewFriendSchedule(\'' + f.id + '\')">予定を見る</button> '
+      + '<button onclick="removeFriend(\'' + f.id + '\')">削除</button>';
+    list.appendChild(li);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function addFriendByCode() {
+  if (!db || !currentUser) return alert("オンライン機能の準備ができていません。");
+  const code = document.getElementById("friendCodeInput").value.trim().toUpperCase();
+  if (!code) return alert("友達コードを入力してな。");
+
+  const q = query(collection(db, "profiles"), where("friendCode", "==", code));
+  const snap = await getDocs(q);
+  if (snap.empty) return alert("その友達コードは見つからへんかった。");
+
+  const friendDoc = snap.docs[0];
+  if (friendDoc.id === currentUser.uid) return alert("自分自身は追加できへんで。");
+
+  const p = friendDoc.data();
+  await setDoc(doc(db, "profiles", currentUser.uid, "friends", friendDoc.id), {
+    name: p.name || "ななし",
+    addedAt: serverTimestamp()
+  });
+  // 相手側にも「あなた」を友達として登録
+  await setDoc(doc(db, "profiles", friendDoc.id, "friends", currentUser.uid), {
+    name: myProfile?.name || "ななし",
+    addedAt: serverTimestamp()
+  });
+
+  await loadFriends();
+  document.getElementById("friendCodeInput").value = "";
+  alert((p.name || "友達") + "を追加したで！");
+}
+
+async function removeFriend(uid) {
+  if (!db || !currentUser) return;
+  await deleteDoc(doc(db, "profiles", currentUser.uid, "friends", uid));
+  // 相手側も削除（Firestoreルールで許可する設定）
+  try { await deleteDoc(doc(db, "profiles", uid, "friends", currentUser.uid)); } catch(e) {}
+  await loadFriends();
+  document.getElementById("friendScheduleBox").style.display = "none";
+}
+
+async function addPublicPlan() {
+  if (!db || !currentUser) return alert("オンライン機能の準備ができていません。");
+  const date = document.getElementById("publicPlanDate").value;
+  const title = document.getElementById("publicPlanTitle").value.trim();
+  if (!date || !title) return alert("日付と予定を入力してな。");
+
+  await addDoc(collection(db, "profiles", currentUser.uid, "publicPlans"), {
+    date, title, createdAt: serverTimestamp()
+  });
+  document.getElementById("publicPlanTitle").value = "";
+  await renderMyPublicPlans();
+}
+
+async function renderMyPublicPlans() {
+  if (!db || !currentUser) return;
+  const snap = await getDocs(query(collection(db, "profiles", currentUser.uid, "publicPlans"), orderBy("date")));
+  const list = document.getElementById("publicPlanList");
+  list.innerHTML = "";
+  snap.docs.forEach(d => {
+    const p = d.data();
+    const li = document.createElement("li");
+    li.textContent = "📅 " + p.date + "　" + p.title;
+    list.appendChild(li);
+  });
+}
+
+async function viewFriendSchedule(uid) {
+  if (!db || !currentUser) return;
+  const friend = friends.find(f => f.id === uid);
+  const profileSnap = await getDoc(doc(db, "profiles", uid));
+  if (!profileSnap.exists()) return alert("友達のプロフィールが見つかりません。");
+
+  const p = profileSnap.data();
+  document.getElementById("friendScheduleBox").style.display = "block";
+  document.getElementById("friendScheduleTitle").textContent = "📅 " + (p.name || friend?.name || "友達") + "の予定";
+
+  const snap = await getDocs(query(collection(db, "profiles", uid, "publicPlans"), orderBy("date")));
+  const list = document.getElementById("friendScheduleList");
+  list.innerHTML = "";
+  if (snap.empty) {
+    list.innerHTML = "<li>公開されている予定はありません。</li>";
+    return;
+  }
+  snap.docs.forEach(d => {
+    const x = d.data();
+    const li = document.createElement("li");
+    li.textContent = "📅 " + x.date + "　" + x.title;
+    list.appendChild(li);
+  });
+}
+
+window.saveOnlineProfile = saveOnlineProfile;
+window.copyFriendCode = async () => {
+  const code = document.getElementById("myFriendCode").textContent;
+  if (!code || code === "準備中…") return;
+  try { await navigator.clipboard.writeText(code); alert("友達コードをコピーしたで！"); }
+  catch(e) { prompt("このコードをコピーしてな", code); }
+};
+window.addFriendByCode = addFriendByCode;
+window.viewFriendSchedule = viewFriendSchedule;
+window.removeFriend = removeFriend;
+window.addPublicPlan = addPublicPlan;
+
+startFirebase();
+</script>
 
 <script>
 let showCompletedKadai = false;
@@ -1281,7 +1577,170 @@ displayKadaiSummary();
         📚<br>課題
     </button>
 
+    <button onclick="showGroup()">
+        👥<br>グループ
+    </button>
+
 </div>
+
+<script>
+let activeGroup = JSON.parse(localStorage.getItem("activeGroup") || "null");
+
+function groupCode() {
+    return Array.from({length: 6}, () =>
+        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 30)]
+    ).join("");
+}
+
+function saveActiveGroup() {
+    localStorage.setItem("activeGroup", JSON.stringify(activeGroup));
+}
+
+function renderGroup() {
+    const box = document.getElementById("activeGroupBox");
+    if (!box) return;
+
+    if (!activeGroup) {
+        box.style.display = "none";
+        return;
+    }
+
+    box.style.display = "block";
+    document.getElementById("activeGroupName").textContent = "👥 " + activeGroup.name;
+    document.getElementById("activeGroupCode").textContent = activeGroup.code;
+
+    const list = document.getElementById("sharedPlanList");
+    list.innerHTML = "";
+
+    (activeGroup.plans || []).forEach((p, i) => {
+        const li = document.createElement("li");
+        li.innerHTML = "📅 " + p.date + "　" + p.title +
+            (p.member ? "　👤 " + p.member : "") +
+            ' <button onclick="deleteSharedPlan(' + i + ')">削除</button>';
+        list.appendChild(li);
+    });
+}
+
+function createGroup() {
+    const name = document.getElementById("groupName").value.trim();
+    if (!name) {
+        alert("グループ名を入力してください");
+        return;
+    }
+
+    activeGroup = {
+        name: name,
+        code: groupCode(),
+        plans: []
+    };
+    saveActiveGroup();
+    renderGroup();
+    alert("グループを作ったで！共有コードを友達に送ってな。");
+}
+
+function joinGroup() {
+    const code = document.getElementById("joinCode").value.trim().toUpperCase();
+    if (!code) {
+        alert("共有コードを入力してください");
+        return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const shared = params.get("group");
+    if (shared) {
+        try {
+            const data = JSON.parse(decodeURIComponent(atob(shared)));
+            if (data.code === code) {
+                activeGroup = data;
+                saveActiveGroup();
+                renderGroup();
+                alert("グループに参加したで！");
+                return;
+            }
+        } catch(e) {}
+    }
+
+    alert("このコードだけでは参加できません。友達から招待リンクを送ってもらってください。");
+}
+
+function buildGroupLink() {
+    const data = encodeURIComponent(btoa(encodeURIComponent(JSON.stringify(activeGroup))));
+    return location.origin + location.pathname + "?group=" + data;
+}
+
+async function copyGroupLink() {
+    if (!activeGroup) return;
+    const link = buildGroupLink();
+    try {
+        await navigator.clipboard.writeText(link);
+        alert("招待リンクをコピーしたで！");
+    } catch(e) {
+        prompt("このリンクをコピーして友達に送ってな", link);
+    }
+}
+
+async function shareGroup() {
+    if (!activeGroup) return;
+    const link = buildGroupLink();
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: "CanpasMateのグループ招待",
+                text: activeGroup.name + " に参加してな！",
+                url: link
+            });
+        } catch(e) {}
+    } else {
+        copyGroupLink();
+    }
+}
+
+function addSharedPlan() {
+    if (!activeGroup) return;
+
+    const date = document.getElementById("sharedPlanDate").value;
+    const title = document.getElementById("sharedPlanTitle").value.trim();
+    const member = document.getElementById("sharedPlanMember").value.trim();
+
+    if (!date || !title) {
+        alert("日付と予定を入力してください");
+        return;
+    }
+
+    if (!activeGroup.plans) activeGroup.plans = [];
+    activeGroup.plans.push({date, title, member});
+    activeGroup.plans.sort((a,b) => a.date.localeCompare(b.date));
+
+    saveActiveGroup();
+    renderGroup();
+
+    document.getElementById("sharedPlanTitle").value = "";
+    document.getElementById("sharedPlanMember").value = "";
+}
+
+function deleteSharedPlan(index) {
+    if (!activeGroup) return;
+    activeGroup.plans.splice(index, 1);
+    saveActiveGroup();
+    renderGroup();
+}
+
+function leaveGroup() {
+    if (!confirm("この端末からグループを退出しますか？")) return;
+    activeGroup = null;
+    localStorage.removeItem("activeGroup");
+    renderGroup();
+}
+
+function showGroup() {
+    document.querySelectorAll(".page").forEach(p => p.style.display = "none");
+    document.getElementById("groupPage").style.display = "block";
+    renderGroup();
+}
+renderGroup();
+</script>
+
 <script>
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
