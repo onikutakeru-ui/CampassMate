@@ -1,7 +1,7 @@
 {
-  "name": "CanpasMate",
-  "short_name": "CanpasMate",
-  "description": "予定・時間割・課題・友達との予定共有をまとめて管理する学生向けアプリ",
+  "name": "Yotomo",
+  "short_name": "Yotomo",
+  "description": "予定・時間割・課題・友達の予定をまとめて管理する学生向けアプリ",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4f7fb",
