@@ -739,14 +739,20 @@ function getAllLocalPublicChoices() {
 }
 
 function getLocalPublicChoices() {
-  return getAllLocalPublicChoices();
+  const source = document.getElementById("publicPlanSource")?.value || "yotei";
+  return getAllLocalPublicChoices().filter(x => {
+    if (source === "yotei") return x.type === "予定";
+    if (source === "jugyo") return x.type === "時間割";
+    if (source === "kadai") return x.type === "課題";
+    return true;
+  });
 }
 
 function updatePublicPlanChoices() {
   const select = document.getElementById("publicPlanChoice");
   if (!select) return;
 
-  const choices = getAllLocalPublicChoices();
+  const choices = getLocalPublicChoices();
   select.innerHTML = "";
 
   if (!choices.length) {
@@ -772,13 +778,15 @@ async function publishSelectedPlan() {
   updatePublicPlanChoices();
 
   const key = document.getElementById("publicPlanChoice")?.value;
-  const selected = getAllLocalPublicChoices().find(x => x.key === key);
+  const selected = getLocalPublicChoices().find(x => x.key === key);
 
   if (!selected) {
     return alert("カレンダー・時間割・課題に公開できるデータがないで。先に予定を登録してな。");
   }
 
   try {
+    const button = document.querySelector('button[onclick="publishSelectedPlan()"]');
+    if (button) button.disabled = true;
     await addDoc(collection(db, "profiles", currentUser.uid, "publicPlans"), {
       date: selected.date,
       title: selected.title,
@@ -790,16 +798,20 @@ async function publishSelectedPlan() {
     alert("「" + selected.title + "」を友達に公開したで！");
   } catch (e) {
     console.error("publishSelectedPlan error:", e);
-    alert("公開に失敗したで。Firestoreのルールを確認してな。");
+    alert("公開に失敗したで。\n\n" + (e?.code || e?.message || "原因不明") );
+  } finally {
+    const button = document.querySelector('button[onclick="publishSelectedPlan()"]');
+    if (button) button.disabled = false;
   }
 }
 
 async function renderMyPublicPlans() {
   if (!db || !currentUser) return;
-  const snap = await getDocs(query(collection(db, "profiles", currentUser.uid, "publicPlans"), orderBy("date")));
+  const snap = await getDocs(collection(db, "profiles", currentUser.uid, "publicPlans"));
   const list = document.getElementById("publicPlanList");
   list.innerHTML = "";
-  snap.docs.forEach(d => {
+  const docs = [...snap.docs].sort((a,b) => String(a.data().date || "").localeCompare(String(b.data().date || "")));
+  docs.forEach(d => {
     const p = d.data();
     const li = document.createElement("li");
     li.textContent = (p.type ? "🌐 " + p.type + "　" : "📅 ") + p.date + (p.time ? "　" + p.time : "") + "　" + p.title;
@@ -817,14 +829,15 @@ async function viewFriendSchedule(uid) {
   document.getElementById("friendScheduleBox").style.display = "block";
   document.getElementById("friendScheduleTitle").textContent = "📅 " + (p.name || friend?.name || "友達") + "の予定";
 
-  const snap = await getDocs(query(collection(db, "profiles", uid, "publicPlans"), orderBy("date")));
+  const snap = await getDocs(collection(db, "profiles", uid, "publicPlans"));
   const list = document.getElementById("friendScheduleList");
   list.innerHTML = "";
   if (snap.empty) {
     list.innerHTML = "<li>公開されている予定はありません。</li>";
     return;
   }
-  snap.docs.forEach(d => {
+  const docs = [...snap.docs].sort((a,b) => String(a.data().date || "").localeCompare(String(b.data().date || "")));
+  docs.forEach(d => {
     const x = d.data();
     const li = document.createElement("li");
     li.textContent = (x.type ? "🌐 " + x.type + "　" : "📅 ") + x.date + (x.time ? "　" + x.time : "") + "　" + x.title;
