@@ -677,71 +677,119 @@ async function addPublicPlan() {
   return publishSelectedPlan();
 }
 
-function getLocalPublicChoices() {
-  const source = document.getElementById("publicPlanSource")?.value || "yotei";
-  if (source === "yotei") {
-    return (JSON.parse(localStorage.getItem("yoteiList")) || []).map((x, i) => ({
+function readLocalList(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.error("localStorage read error:", key, e);
+    return [];
+  }
+}
+
+function getAllLocalPublicChoices() {
+  const choices = [];
+
+  readLocalList("yoteiList").forEach((x, i) => {
+    if (!x || !x.date || !x.yotei) return;
+    choices.push({
       key: "yotei:" + i,
-      label: "📅 " + x.date + " " + x.jikan + "　" + x.yotei,
-      date: x.date, title: x.yotei, time: x.jikan, type: "予定"
-    }));
-  }
-  if (source === "jugyo") {
-    const days = ["日","月","火","水","木","金","土"];
-    const now = new Date();
-    return (JSON.parse(localStorage.getItem("jugyoList")) || []).map((x, i) => {
-      const next = new Date(now);
-      let diff = days.indexOf(x.youbi) - now.getDay();
-      if (diff < 0) diff += 7;
-      next.setDate(now.getDate() + diff);
-      return {
-        key: "jugyo:" + i,
-        label: "🎓 " + x.youbi + " " + x.jigen + "　" + x.jugyo,
-        date: formatDate(next),
-        title: x.jugyo + "（" + x.youbi + " " + x.jigen + "）",
-        time: "", type: "時間割"
-      };
+      label: "📅 予定｜" + x.date + " " + (x.jikan || "") + "　" + x.yotei,
+      date: x.date,
+      title: x.yotei,
+      time: x.jikan || "",
+      type: "予定"
     });
-  }
-  return (JSON.parse(localStorage.getItem("kadaiList")) || []).map((x, i) => ({
-    key: "kadai:" + i,
-    label: "📚 " + x.date + "　" + x.kadai,
-    date: x.date, title: "課題：" + x.kadai, time: "", type: "課題"
-  }));
+  });
+
+  const days = ["日","月","火","水","木","金","土"];
+  const now = new Date();
+  readLocalList("jugyoList").forEach((x, i) => {
+    if (!x || !x.jugyo) return;
+    const next = new Date(now);
+    let diff = days.indexOf(x.youbi) - now.getDay();
+    if (diff < 0) diff += 7;
+    if (diff < 0) diff = 0;
+    next.setDate(now.getDate() + diff);
+    choices.push({
+      key: "jugyo:" + i,
+      label: "🎓 時間割｜" + (x.youbi || "") + " " + (x.jigen || "") + "　" + x.jugyo,
+      date: formatDate(next),
+      title: x.jugyo + "（" + (x.youbi || "") + " " + (x.jigen || "") + "）",
+      time: "",
+      type: "時間割"
+    });
+  });
+
+  readLocalList("kadaiList").forEach((x, i) => {
+    if (!x || !x.date || !x.kadai) return;
+    choices.push({
+      key: "kadai:" + i,
+      label: "📚 課題｜" + x.date + "　" + x.kadai,
+      date: x.date,
+      title: "課題：" + x.kadai,
+      time: "",
+      type: "課題"
+    });
+  });
+
+  return choices;
+}
+
+function getLocalPublicChoices() {
+  return getAllLocalPublicChoices();
 }
 
 function updatePublicPlanChoices() {
   const select = document.getElementById("publicPlanChoice");
   if (!select) return;
-  const choices = getLocalPublicChoices();
+
+  const choices = getAllLocalPublicChoices();
   select.innerHTML = "";
+
   if (!choices.length) {
     const opt = document.createElement("option");
-    opt.value = ""; opt.textContent = "公開できるデータがありません";
+    opt.value = "";
+    opt.textContent = "カレンダー・時間割・課題に登録がありません";
     select.appendChild(opt);
     return;
   }
+
   choices.forEach(x => {
     const opt = document.createElement("option");
-    opt.value = x.key; opt.textContent = x.label;
+    opt.value = x.key;
+    opt.textContent = x.label;
     select.appendChild(opt);
   });
 }
 
 async function publishSelectedPlan() {
   if (!db || !currentUser) return alert("オンライン機能の準備ができていません。");
+
+  // 公開画面を開いた直後の古い候補を使わず、現在のローカルデータを再取得
+  updatePublicPlanChoices();
+
   const key = document.getElementById("publicPlanChoice")?.value;
-  const selected = getLocalPublicChoices().find(x => x.key === key);
-  if (!selected) return alert("公開する予定を選んでな。");
+  const selected = getAllLocalPublicChoices().find(x => x.key === key);
+
+  if (!selected) {
+    return alert("カレンダー・時間割・課題に公開できるデータがないで。先に予定を登録してな。");
+  }
+
   try {
     await addDoc(collection(db, "profiles", currentUser.uid, "publicPlans"), {
-      date: selected.date, title: selected.title, time: selected.time || "",
-      type: selected.type, createdAt: serverTimestamp()
+      date: selected.date,
+      title: selected.title,
+      time: selected.time || "",
+      type: selected.type,
+      createdAt: serverTimestamp()
     });
     await renderMyPublicPlans();
-    alert("友達に公開したで！");
+    alert("「" + selected.title + "」を友達に公開したで！");
   } catch (e) {
-    console.error(e);
+    console.error("publishSelectedPlan error:", e);
     alert("公開に失敗したで。Firestoreのルールを確認してな。");
   }
 }
