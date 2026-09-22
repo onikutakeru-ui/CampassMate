@@ -846,6 +846,8 @@ async function viewFriendSchedule(uid) {
 }
 
 window.saveOnlineProfile = saveOnlineProfile;
+window.updatePublicPlanChoices = updatePublicPlanChoices;
+window.publishSelectedPlan = publishSelectedPlan;
 window.copyFriendCode = async () => {
   const code = document.getElementById("myFriendCode").textContent;
   if (!code || code === "準備中…") return;
